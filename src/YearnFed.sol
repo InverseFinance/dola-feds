@@ -10,17 +10,19 @@ contract YearnFed{
     address public chair; // Fed Chair
     address public gov;
     uint public supply;
-    uint public maxLossBp;
+    uint public maxLossBpContraction;
+    uint public maxLossBpTakeProfit;
 
     event Expansion(uint amount);
     event Contraction(uint amount);
 
-    constructor(IYearnVault vault_, address gov_, uint maxLossBp_) {
+    constructor(IYearnVault vault_, address gov_, uint maxLossBpContraction_, uint maxLossBpTakeProfit_) {
         vault = vault_;
         underlying = IERC20(vault_.token());
         underlying.approve(address(vault), type(uint256).max);
         chair = msg.sender;
-        maxLossBp = maxLossBp_;
+        maxLossBpContraction = maxLossBpContraction_;
+        maxLossBpTakeProfit = maxLossBpTakeProfit_;
         gov = gov_;
     }
 
@@ -40,15 +42,24 @@ contract YearnFed{
         chair = newChair_;
     }
     /**
-    @notice Method for setting max loss when withdraing from yearn vault
-    @param newMaxLossBp new maximally allowed loss in Bp 1 = 0.001%
+    @notice Method for governance to set max loss in basis points, when withdraing from yearn vault
+    @param newMaxLossBpContraction new maximally allowed loss in Bp 1 = 0.001%
     */
-    function setMaxLossBp(uint newMaxLossBp) public {
+    function setMaxLossBpContraction(uint newMaxLossBpContraction) public {
         require(msg.sender == gov, "ONLY GOV");
-        require(newMaxLossBp <= 100000);
-        maxLossBp = newMaxLossBp;
+        require(newMaxLossBpContraction <= 100000);
+        maxLossBpContraction = newMaxLossBpContraction;
     }
 
+    /**
+    @notice Method for governance to set max loss in basis points, when taking profit from yearn vault
+    @param newMaxLossBpTakeProfit new maximally allowed loss in Bp 1 = 0.001%
+    */
+    function setMaxLossBpTakeProfit(uint newMaxLossBpTakeProfit) public {
+        require(msg.sender == gov, "ONLY GOV");
+        require(newMaxLossBpTakeProfit <= 100000);
+        maxLossBpTakeProfit = newMaxLossBpTakeProfit;
+    }
 
     /**
     @notice Method for withdrawing any token from the contract to governance. Should only be used in emergencies.
@@ -102,7 +113,7 @@ contract YearnFed{
     */
     function contraction(uint amount) public {
         require(msg.sender == chair, "ONLY CHAIR");
-        uint underlyingWithdrawn = _withdrawAmountUnderlying(amount);
+        uint underlyingWithdrawn = _withdrawAmountUnderlying(amount, maxLossBpContraction);
         require(underlyingWithdrawn <= supply, "AMOUNT TOO BIG"); // can't burn profits
         require(underlyingWithdrawn > 0, "NOTHING WITHDRAWN");
         underlying.burn(underlyingWithdrawn);
@@ -120,7 +131,7 @@ contract YearnFed{
         if(expectedBalance > supply){
             uint expectedProfit = expectedBalance - supply;
             if(expectedProfit > 0) {
-                uint actualProfit = _withdrawAmountUnderlying(expectedProfit);
+                uint actualProfit = _withdrawAmountUnderlying(expectedProfit, maxLossBpTakeProfit);
                 require(actualProfit > 0, "NO PROFIT");
                 underlying.transfer(gov, actualProfit);
             }
@@ -133,8 +144,9 @@ contract YearnFed{
     @dev See dev note on Contraction method
 
     @param amount The amount of underlying tokens to withdraw.
+    @param maxLossBp The maximally acceptable loss in basis points. 1 = 0.001%
     */
-    function _withdrawAmountUnderlying(uint amount) internal returns (uint){
+    function _withdrawAmountUnderlying(uint amount, uint maxLossBp) internal returns (uint){
         uint sharesNeeded = amount*10**vault.decimals()/vault.pricePerShare();
         return vault.withdraw(sharesNeeded, address(this), maxLossBp);
     }
