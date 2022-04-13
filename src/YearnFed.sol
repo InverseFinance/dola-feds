@@ -43,11 +43,11 @@ contract YearnFed{
     }
     /**
     @notice Method for governance to set max loss in basis points, when withdraing from yearn vault
-    @param newMaxLossBpContraction new maximally allowed loss in Bp 1 = 0.001%
+    @param newMaxLossBpContraction new maximally allowed loss in Bp 1 = 0.01%
     */
     function setMaxLossBpContraction(uint newMaxLossBpContraction) public {
         require(msg.sender == gov, "ONLY GOV");
-        require(newMaxLossBpContraction <= 100000);
+        require(newMaxLossBpContraction <= 10000);
         maxLossBpContraction = newMaxLossBpContraction;
     }
 
