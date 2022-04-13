@@ -10,17 +10,17 @@ contract YearnFed{
     address public chair; // Fed Chair
     address public gov;
     uint public supply;
-    uint public maxLoss;
+    uint public maxLossBp;
 
     event Expansion(uint amount);
     event Contraction(uint amount);
 
-    constructor(IYearnVault vault_, address gov_, uint maxLoss_) {
+    constructor(IYearnVault vault_, address gov_, uint maxLossBp_) {
         vault = vault_;
         underlying = IERC20(vault_.token());
         underlying.approve(address(vault), type(uint256).max);
         chair = msg.sender;
-        maxLoss = maxLoss_;
+        maxLossBp = maxLossBp_;
         gov = gov_;
     }
 
@@ -41,11 +41,12 @@ contract YearnFed{
     }
     /**
     @notice Method for setting max loss when withdraing from yearn vault
-    @param newMaxLoss new maximally allowed loss
+    @param newMaxLossBp new maximally allowed loss in Bp 1 = 0.001%
     */
-    function setMaxLoss(uint newMaxLoss) public {
+    function setMaxLossBp(uint newMaxLossBp) public {
         require(msg.sender == gov, "ONLY GOV");
-        maxLoss = newMaxLoss;
+        require(newMaxLossBp <= 100000);
+        maxLossBp = newMaxLossBp;
     }
 
 
@@ -135,7 +136,7 @@ contract YearnFed{
     */
     function _withdrawAmountUnderlying(uint amount) internal returns (uint){
         uint sharesNeeded = amount*10**vault.decimals()/vault.pricePerShare();
-        return vault.withdraw(sharesNeeded, address(this), maxLoss);
+        return vault.withdraw(sharesNeeded, address(this), maxLossBp);
     }
 
     /**
