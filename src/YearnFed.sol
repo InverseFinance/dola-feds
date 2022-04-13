@@ -1,6 +1,7 @@
 pragma solidity ^0.8.13;
 
 import "IYearnVault.sol";
+import "IERC20.sol";
 
 contract YearnFed{
 
