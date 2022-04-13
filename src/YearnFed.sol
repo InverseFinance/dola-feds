@@ -1,42 +1,11 @@
 pragma solidity ^0.8.13;
 
 import "IMetapool.sol";
+import "IYVault.sol";
 
-interface IERC20 {
-    function totalSupply() external view returns (uint256);
-    function decimals() external view returns (uint256);
-    function balanceOf(address account) external view returns (uint256);
-    function transfer(address to, uint256 amount) external returns (bool);
-    function allowance(address owner, address spender) external view returns (uint256);
-    function approve(address spender, uint256 amount) external returns (bool);
-    function transferFrom(
-        address from,
-        address to,
-        uint256 amount
-    ) external returns (bool);
-    function burn(uint amount) external;
-}
-interface IyVault is IERC20{
-    //Getter functions for public vars
-    function token() external view returns (IERC20);
-    function depositLimit() external view returns (uint);  // Limit for totalAssets the Vault can hold
-    function debtRatio() external view returns (uint);  // Debt ratio for the Vault across all strategies (in BPS, <= 10k)
-    function totalDebt() external view returns (uint);  // Amount of tokens that all strategies have borrowed
-    function lastReport() external view returns (uint);  // block.timestamp of last report
-    function activation() external view returns (uint);  // block.timestamp of contract deployment
-    function lockedProfit() external view returns (uint); // how much profit is locked and cant be withdrawn
-    function lockedProfitDegradation() external view returns (uint); // rate per block of degradation. DEGRADATION_COEFFICIENT is 100% per block
+contract YearnFed{
 
-    //Function interfaces
-    function deposit(uint _amount,  address recipient) external returns (uint);
-    function withdraw(uint maxShares, address recipient, uint maxLoss) external returns (uint);
-    function maxAvailableShares() external returns (uint);
-    function pricePerShare() external returns (uint);
-}
-
-contract YearnFed is CurvePoolAdapter{
-
-    IyVault public vault;
+    IYVault public vault;
     IERC20 public underlying;
     address public chair; // Fed Chair
     address public gov;
@@ -45,7 +14,7 @@ contract YearnFed is CurvePoolAdapter{
     event Expansion(uint amount);
     event Contraction(uint amount);
 
-    constructor(IyVault vault_, address gov_) {
+    constructor(IYVault vault_, address gov_) {
         vault = vault_;
         underlying = IERC20(vault_.token());
         underlying.approve(address(vault), type(uint256).max);
@@ -84,12 +53,12 @@ contract YearnFed is CurvePoolAdapter{
     */
     function expansion(uint amount) public {
         require(msg.sender == chair, "ONLY CHAIR");
-        //Alternatively to the below, can do
+        //Alternatively set amount to max uint if over deposit limit,
+        //as that supplies greatest possible amount into vault
         /*
         if( amount > _maxDeposit()){
             amount = type(uint256).max;
         }
-        As max uint always supplies the greatest amount possible in yearn vaults 
         */
         require(amount <= _maxDeposit(), "AMOUNT TOO BIG"); // can't deploy more than max
         uint shares = vault.deposit(amount, address(this));
@@ -164,7 +133,7 @@ contract YearnFed is CurvePoolAdapter{
     @notice calculates the maximum possible deposit for the yearn vault
     */
     function _maxDeposit() view internal returns (uint) {
-        return vault.depositLimit() - vault.totalDebt();
+        return vault.depositLimit() - vault.totalDebt() - underlying.balanceOf(address(vault));
     }
     
 }
