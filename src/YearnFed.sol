@@ -62,7 +62,6 @@ contract YearnFed{
         */
         require(amount <= _maxDeposit(), "AMOUNT TOO BIG"); // can't deploy more than max
         uint shares = vault.deposit(amount, address(this));
-        require(shares == 0, 'Supplying failed'); //Probably an unnecessary require
         supply = supply + amount;
         emit Expansion(amount);
     }
@@ -133,7 +132,14 @@ contract YearnFed{
     @notice calculates the maximum possible deposit for the yearn vault
     */
     function _maxDeposit() view internal returns (uint) {
-        return vault.depositLimit() - vault.totalDebt() - underlying.balanceOf(address(vault));
+        // this can underflow as deposit limit can be set to 0 regardless of amount of assets in vault
+        // return vault.depositLimit() - vault.totalDebt() - underlying.balanceOf(address(vault));
+        uint depositLimit = vault.depositLimit();
+        uint totalAssets = vault.totalAssets();
+        if depositLimit > totalAssets {
+            return depositLimit - totalAssets;
+        }
+        return 0;
     }
     
 }
