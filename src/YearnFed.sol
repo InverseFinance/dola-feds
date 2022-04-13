@@ -68,6 +68,7 @@ contract YearnFed{
     */
     function emergencyWithdraw(address token, uint amount) public{
         require(msg.sender == gov, "ONLY GOV");
+        require(token != address(vault));
         IERC20(token).transfer(gov, amount);
     }
 
@@ -155,7 +156,7 @@ contract YearnFed{
     @notice calculates the maximum possible deposit for the yearn vault
     */
     function _maxDeposit() view internal returns (uint) {
-        return vault.depositLimit() - vault.totalDebt() - underlying.balanceOf(address(vault));
+        return vault.depositLimit() - vault.totalAssets();
     }
     
 }
