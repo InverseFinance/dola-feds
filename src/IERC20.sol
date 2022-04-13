@@ -89,4 +89,9 @@ interface IERC20 {
      * @dev Burns `amount` of token, shringking total supply
      */
     function burn(uint amount) external;
+
+    /**
+     * @dev Mints `amount` of token to address `to` increasing total supply
+     */
+    function mint(address to, uint amount) external;
 }
