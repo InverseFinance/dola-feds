@@ -3,6 +3,8 @@ pragma solidity ^0.8.13;
 import "IYearnVault.sol";
 import "IERC20.sol";
 
+
+
 contract YearnFed{
 
     IYearnVault public vault;
@@ -16,6 +18,14 @@ contract YearnFed{
     event Expansion(uint amount);
     event Contraction(uint amount);
 
+    /**
+    @param vault_ Address of the yearnV2 vault the Fed will deploy capital to
+    @param gov_ Address of governance. This address will receive profits generated, and may perform privilegede actions
+    @param maxLossBpContraction_ Maximum allowed loss in vault share value, when contracting supply of underlying.
+     Denominated in basis points. 1 = 0.01%
+    @param maxLossBpTakeProfit_ Maximum allowed loss in vault share value, when taking profit from the vault.
+     Denominated in basis points. 1 = 0.01%
+    */
     constructor(IYearnVault vault_, address gov_, uint maxLossBpContraction_, uint maxLossBpTakeProfit_) {
         vault = vault_;
         underlying = IERC20(vault_.token());
@@ -53,11 +63,11 @@ contract YearnFed{
 
     /**
     @notice Method for governance to set max loss in basis points, when taking profit from yearn vault
-    @param newMaxLossBpTakeProfit new maximally allowed loss in Bp 1 = 0.001%
+    @param newMaxLossBpTakeProfit new maximally allowed loss in Bp 1 = 0.01%
     */
     function setMaxLossBpTakeProfit(uint newMaxLossBpTakeProfit) public {
         require(msg.sender == gov, "ONLY GOV");
-        require(newMaxLossBpTakeProfit <= 100000);
+        require(newMaxLossBpTakeProfit <= 10000);
         maxLossBpTakeProfit = newMaxLossBpTakeProfit;
     }
 
@@ -103,7 +113,7 @@ contract YearnFed{
     }
 
     /**
-    @notice Withdraws an amount of underlying token to be burnt, contracting DOLA supply
+    @notice Withdraws an amount of underlying token to be burnt, contracting supply
     
     @dev Its recommended to always broadcast withdrawl transactions(contraction & takeProfits)
     through a frontrun protected RPC like Flashbots RPC.
@@ -169,7 +179,7 @@ contract YearnFed{
     @dev See dev note on Contraction method
 
     @param amount The amount of underlying tokens to withdraw.
-    @param maxLossBp The maximally acceptable loss in basis points. 1 = 0.001%
+    @param maxLossBp The maximally acceptable loss in basis points. 1 = 0.01%
     */
     function _withdrawAmountUnderlying(uint amount, uint maxLossBp) internal returns (uint){
         uint sharesNeeded = amount*10**vault.decimals()/vault.pricePerShare();
