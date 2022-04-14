@@ -104,8 +104,7 @@ contract YearnFed{
         */
         require(amount <= _maxDeposit(), "AMOUNT TOO BIG"); // can't deploy more than max
         underlying.mint(address(this), amount);
-        uint shares = vault.deposit(amount, address(this));
-        require(shares == 0, 'Supplying failed'); //Probably an unnecessary require
+        vault.deposit(amount, address(this));
         supply = supply + amount;
         emit Expansion(amount);
     }
