@@ -3,8 +3,6 @@ pragma solidity ^0.8.13;
 import "IYearnVault.sol";
 import "IERC20.sol";
 
-
-
 contract YearnFed{
 
     IYearnVault public vault;
@@ -190,7 +188,9 @@ contract YearnFed{
     @notice calculates the maximum possible deposit for the yearn vault
     */
     function _maxDeposit() view internal returns (uint) {
-        return vault.depositLimit() - vault.totalAssets();
+        if(vault.totalAssets() > vault.depositLimit()){
+            return vault.depositLimit() - vault.totalAssets();
+        }
+        return 0;
     }
-    
 }
