@@ -17,6 +17,6 @@ interface IYearnVault is IERC20{
     function deposit(uint _amount,  address recipient) external returns (uint);
     function withdraw(uint maxShares, address recipient, uint maxLoss) external returns (uint);
     function maxAvailableShares() external returns (uint);
-    function pricePerShare() external returns (uint);
-    function totalAssets() external returns (uint);
+    function pricePerShare() external view returns (uint);
+    function totalAssets() external view returns (uint);
 }
