@@ -119,15 +119,22 @@ contract YearnFed{
     @param amount The amount of underlying tokens to withdraw. Note that more tokens may
     be withdrawn than requested, as price is calculated by debts to strategies, but strategies
     may have outperformed price of underlying token.
+    If underlyingWithdrawn exceeds supply, the remainder is returned as profits
     */
     function contraction(uint amount) public {
         require(msg.sender == chair, "ONLY CHAIR");
         uint underlyingWithdrawn = _withdrawAmountUnderlying(amount, maxLossBpContraction);
-        require(underlyingWithdrawn <= supply, "AMOUNT TOO BIG"); // can't burn profits
         require(underlyingWithdrawn > 0, "NOTHING WITHDRAWN");
-        underlying.burn(underlyingWithdrawn);
-        supply = supply - amount;
-        emit Contraction(underlyingWithdrawn);
+        if(underlyingWithdrawn > supply){
+            underlying.burn(supply);
+            underlying.transfer(gov, underlyingWithdrawn-supply);
+            emit Contraction(supply);
+            supply = 0;
+        } else {
+            underlying.burn(underlyingWithdrawn);
+            supply = supply - underlyingWithdrawn;
+            emit Contraction(underlyingWithdrawn);
+        }
     }
     /**
     @notice Withdraws every vault share, leaving no dust.
