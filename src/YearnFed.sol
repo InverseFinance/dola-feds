@@ -124,17 +124,7 @@ contract YearnFed{
     function contraction(uint amount) public {
         require(msg.sender == chair, "ONLY CHAIR");
         uint underlyingWithdrawn = _withdrawAmountUnderlying(amount, maxLossBpContraction);
-        require(underlyingWithdrawn > 0, "NOTHING WITHDRAWN");
-        if(underlyingWithdrawn > supply){
-            underlying.burn(supply);
-            underlying.transfer(gov, underlyingWithdrawn-supply);
-            emit Contraction(supply);
-            supply = 0;
-        } else {
-            underlying.burn(underlyingWithdrawn);
-            supply = supply - underlyingWithdrawn;
-            emit Contraction(underlyingWithdrawn);
-        }
+        _contraction(underlyingWithdrawn);
     }
     /**
     @notice Withdraws every vault share, leaving no dust.
@@ -145,20 +135,26 @@ contract YearnFed{
     function contractAll() public {
         require(msg.sender == chair, "ONLY CHAIR");
         uint underlyingWithdrawn = vault.withdraw(vault.balanceOf(address(this)), address(this), maxLossBpContraction);
+        _contraction(underlyingWithdrawn);
+    }
+
+    /**
+    @notice Burns the amount of underlyingWithdrawn.
+    If the amount exceeds supply, the surplus is sent to governance as profit
+    @param underlyingWithdrawn Amount of underlying that has successfully been withdrawn
+    */
+    function _contraction(uint underlyingWithdrawn) internal {
+        require(underlyingWithdrawn > 0, "NOTHING WITHDRAWN");
         if(underlyingWithdrawn > supply){
-            //If more were withdrawn than supplied, supply will be burned
-            // and the rest will be transferred as profit to gov
             underlying.burn(supply);
             underlying.transfer(gov, underlyingWithdrawn-supply);
             emit Contraction(supply);
             supply = 0;
         } else {
-            //If the vault shares are worth less than what has been supplied,
-            //This will result in some bad debt
-            supply -= underlyingWithdrawn;
             underlying.burn(underlyingWithdrawn);
+            supply = supply - underlyingWithdrawn;
             emit Contraction(underlyingWithdrawn);
-        }
+        }   
     }
 
     /**
