@@ -34,7 +34,7 @@ contract MainnetForkTest is DSTest {
         yearnFed.changeChair(fedChair);
     }
 
-    function testSetFedChair() public{
+    function testSetFedChair_ChangeChair_WhenSettingNewChair() public{
         //Arrange
         address currentChair = yearnFed.chair();
         cheats.startPrank(gov);
@@ -45,6 +45,46 @@ contract MainnetForkTest is DSTest {
         //Assert
         assertEq(yearnFed.chair(), gov);
         assertTrue(yearnFed.chair() != currentChair);
+    }
+
+    function testSetMaxLossBpContraction_ChangeMaxLossBpForContraction_WhenSettingNewMaxLoss() public{
+        //Arrange
+        uint preMaxLossBp = yearnFed.maxLossBpContraction();
+        cheats.startPrank(gov);
+
+        //Act
+        yearnFed.setMaxLossBpContraction(preMaxLossBp+1);
+
+        //Assert
+        assertEq(yearnFed.maxLossBpContraction(), preMaxLossBp+1);
+    }
+
+    function testFailSetMaxLossBpContraction_Revert_WhenSettingNewMaxLossAbove10000() public{
+        //Arrange
+        cheats.startPrank(gov);
+
+        //Act
+        yearnFed.setMaxLossBpContraction(10001);
+    }
+
+    function testSetMaxLossBpTakeProfit_ChangeMaxLossBpForTakeProfit_WhenSettingNewMaxLoss() public{
+        //Arrange
+        uint preMaxLossBp = yearnFed.maxLossBpTakeProfit();
+        cheats.startPrank(gov);
+
+        //Act
+        yearnFed.setMaxLossBpTakeProfit(preMaxLossBp+1);
+
+        //Assert
+        assertEq(yearnFed.maxLossBpTakeProfit(), preMaxLossBp+1);
+    }
+
+    function testFailSetMaxLossBpTakeProfit_Revert_WhenSettingNewMaxLossAbove10000() public{
+        //Arrange
+        cheats.startPrank(gov);
+
+        //Act
+        yearnFed.setMaxLossBpTakeProfit(10001);
     }
 
     function testExpansion_IncreaseDolasBy1ether_When_Expand1Ether() public{
