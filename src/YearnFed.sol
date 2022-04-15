@@ -104,7 +104,8 @@ contract YearnFed{
         */
         require(amount <= _maxDeposit(), "AMOUNT TOO BIG"); // can't deploy more than max
         underlying.mint(address(this), amount);
-        vault.deposit(amount, address(this));
+        uint shares = vault.deposit(amount, address(this));
+        require(shares > 0);
         supply = supply + amount;
         emit Expansion(amount);
     }
@@ -120,9 +121,9 @@ contract YearnFed{
     may have outperformed price of underlying token.
     If underlyingWithdrawn exceeds supply, the remainder is returned as profits
     */
-    function contraction(uint amount) public {
+    function contraction(uint amountUnderlying) public {
         require(msg.sender == chair, "ONLY CHAIR");
-        uint underlyingWithdrawn = _withdrawAmountUnderlying(amount, maxLossBpContraction);
+        uint underlyingWithdrawn = _withdrawAmountUnderlying(amountUnderlying, maxLossBpContraction);
         _contraction(underlyingWithdrawn);
     }
     /**
