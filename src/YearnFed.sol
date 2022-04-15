@@ -55,7 +55,7 @@ contract YearnFed{
     */
     function setMaxLossBpContraction(uint newMaxLossBpContraction) public {
         require(msg.sender == gov, "ONLY GOV");
-        require(newMaxLossBpContraction <= 10000);
+        require(newMaxLossBpContraction <= 10000, "MAXLOSS OVER 100%");
         maxLossBpContraction = newMaxLossBpContraction;
     }
 
@@ -65,7 +65,7 @@ contract YearnFed{
     */
     function setMaxLossBpTakeProfit(uint newMaxLossBpTakeProfit) public {
         require(msg.sender == gov, "ONLY GOV");
-        require(newMaxLossBpTakeProfit <= 10000);
+        require(newMaxLossBpTakeProfit <= 10000, "MAXLOSS OVER 100%");
         maxLossBpTakeProfit = newMaxLossBpTakeProfit;
     }
 
