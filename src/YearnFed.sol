@@ -1,7 +1,7 @@
 pragma solidity ^0.8.13;
 
-import "IYearnVault.sol";
-import "IERC20.sol";
+import "src/IYearnVault.sol";
+import "src/IERC20.sol";
 
 contract YearnFed{
 
@@ -116,7 +116,7 @@ contract YearnFed{
     @dev Its recommended to always broadcast withdrawl transactions(contraction & takeProfits)
     through a frontrun protected RPC like Flashbots RPC.
     
-    @param amount The amount of underlying tokens to withdraw. Note that more tokens may
+    @param amountUnderlying The amount of underlying tokens to withdraw. Note that more tokens may
     be withdrawn than requested, as price is calculated by debts to strategies, but strategies
     may have outperformed price of underlying token.
     If underlyingWithdrawn exceeds supply, the remainder is returned as profits
@@ -192,8 +192,8 @@ contract YearnFed{
     */
     function _maxDeposit() view internal returns (uint) {
         if(vault.totalAssets() > vault.depositLimit()){
-            return vault.depositLimit() - vault.totalAssets();
+            return 0;
         }
-        return 0;
+        return vault.depositLimit() - vault.totalAssets();
     }
 }
