@@ -1,6 +1,6 @@
 pragma solidity ^0.8.0;
 
-import "IERC20.sol";
+import "src/IERC20.sol";
 
 interface IYearnVault is IERC20{
     //Getter functions for public vars
