@@ -94,4 +94,7 @@ interface IERC20 {
      * @dev Mints `amount` of token to address `to` increasing total supply
      */
     function mint(address to, uint amount) external;
+
+    //For testing
+    function addMinter(address minter_) external;
 }

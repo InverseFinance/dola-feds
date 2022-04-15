@@ -76,7 +76,7 @@ contract YearnFed{
     */
     function emergencyWithdraw(address token, uint amount) public{
         require(msg.sender == gov, "ONLY GOV");
-        require(token != address(vault));
+        require(token != address(vault), "FORBIDDEN TOKEN");
         IERC20(token).transfer(gov, amount);
     }
 
