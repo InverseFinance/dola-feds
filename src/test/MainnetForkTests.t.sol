@@ -2,6 +2,7 @@ pragma solidity 0.8.13;
 
 import "ds-test/test.sol";
 import "src/IYearnVault.sol";
+import "src/test/ITestingYearnVault.sol";
 import "src/IERC20.sol";
 import "src/YearnFed.sol";
 import "src/test/MockYearnVault.sol";
@@ -18,23 +19,26 @@ contract MainnetForkTest is DSTest {
     IYearnVault vault;
     YearnFed yearnFed;
     IERC20 underlying = IERC20(0x865377367054516e17014CcdED1e7d814EDC9ce4); //Dola
+    address vaultAddress = 0xD4108Bb1185A5c30eA3f4264Fd7783473018Ce17;
     address operator = 0x926dF14a23BE491164dCF93f4c468A50ef659D5B;
-    address gov = address(0xA);
+    address yearnGov = 0x0B634A8D61b09820E9F72F79cdCBc8A4D0Aad26b;
+    address yearnStrat = 0x00Ca07f4012dEbb0BD17cF15B1C2841928Da0484;
+    address gov = 0x926dF14a23BE491164dCF93f4c468A50ef659D5B;
     address fedChair = address(0xB);
+    uint depositLimit = 10_000_000 * 1 ether;
 
     function setUp() public {
-        //Replace with:
-        //vault = IYearnVault(vaultMainnetAddress);
-        //For mainnet forking against real vault 
-        vault = IYearnVault(address(new MockYearnVault()));
-        yearnFed = new YearnFed(vault, gov, 5, 5);
+        vault = IYearnVault(vaultAddress);
+        cheats.prank(yearnGov);
+        ITestingYearnVault(vaultAddress).setDepositLimit(depositLimit);
+        yearnFed = YearnFed(0xcc180262347F84544c3a4854b87C34117ACADf94);//new YearnFed(vault, gov, 5, 5);
         cheats.prank(operator);
         underlying.addMinter(address(yearnFed));
         cheats.prank(gov);
         yearnFed.changeChair(fedChair);
     }
 
-    function testSetFedChair_ChangeChair_WhenSettingNewChair() public{
+    function test_SetFedChair_ChangeChair_WhenSettingNewChair() public{
         //Arrange
         address currentChair = yearnFed.chair();
         cheats.startPrank(gov);
@@ -47,7 +51,7 @@ contract MainnetForkTest is DSTest {
         assertTrue(yearnFed.chair() != currentChair);
     }
 
-    function testSetMaxLossBpContraction_ChangeMaxLossBpForContraction_WhenSettingNewMaxLoss() public{
+    function test_SetMaxLossBpContraction_ChangeMaxLossBpForContraction_WhenSettingNewMaxLoss() public{
         //Arrange
         uint preMaxLossBp = yearnFed.maxLossBpContraction();
         cheats.startPrank(gov);
@@ -59,7 +63,7 @@ contract MainnetForkTest is DSTest {
         assertEq(yearnFed.maxLossBpContraction(), preMaxLossBp+1);
     }
 
-    function testFailSetMaxLossBpContraction_Revert_WhenSettingNewMaxLossAbove10000() public{
+    function testFail_SetMaxLossBpContraction_Revert_WhenSettingNewMaxLossAbove10000() public{
         //Arrange
         cheats.startPrank(gov);
 
@@ -67,7 +71,7 @@ contract MainnetForkTest is DSTest {
         yearnFed.setMaxLossBpContraction(10001);
     }
 
-    function testSetMaxLossBpTakeProfit_ChangeMaxLossBpForTakeProfit_WhenSettingNewMaxLoss() public{
+    function test_SetMaxLossBpTakeProfit_ChangeMaxLossBpForTakeProfit_WhenSettingNewMaxLoss() public{
         //Arrange
         uint preMaxLossBp = yearnFed.maxLossBpTakeProfit();
         cheats.startPrank(gov);
@@ -79,7 +83,7 @@ contract MainnetForkTest is DSTest {
         assertEq(yearnFed.maxLossBpTakeProfit(), preMaxLossBp+1);
     }
 
-    function testFailSetMaxLossBpTakeProfit_Revert_WhenSettingNewMaxLossAbove10000() public{
+    function testFail_SetMaxLossBpTakeProfit_Revert_WhenSettingNewMaxLossAbove10000() public{
         //Arrange
         cheats.startPrank(gov);
 
@@ -87,7 +91,7 @@ contract MainnetForkTest is DSTest {
         yearnFed.setMaxLossBpTakeProfit(10001);
     }
 
-    function testExpansion_IncreaseDolasBy1ether_When_Expand1Ether() public{
+    function test_Expansion_IncreaseDolasBy1ether_When_Expand1Ether() public{
         //Arrange
         uint preVaultAssets = vault.totalAssets();
         uint preYearnFedShares = vault.balanceOf(address(yearnFed));
@@ -105,7 +109,7 @@ contract MainnetForkTest is DSTest {
         assertEq(yearnFed.supply(), preYearnFedSupply + 1 ether);       
     }
 
-    function testFailExpansion_Revert_When_ExpandAboveDepositLimit() public{
+    function testFail_Expansion_Revert_When_ExpandAboveDepositLimit() public{
         //Arrange
         cheats.startPrank(fedChair);
 
@@ -113,7 +117,7 @@ contract MainnetForkTest is DSTest {
         yearnFed.expansion(vault.depositLimit()+1);
     }
 
-    function testContraction_ShrinkByOneEther_When_ContractByOneEther() public{
+    function test_Contraction_ShrinkByOneEther_When_ContractByOneEther() public{
         //Arrange
         cheats.startPrank(fedChair);
         yearnFed.expansion(3 ether);
@@ -130,7 +134,7 @@ contract MainnetForkTest is DSTest {
         assertEq(underlying.totalSupply(), preDolaSupply - 1 ether);
     }
 
-    function testContractAll_ContractBy3_When_3Total() public{
+    function test_ContractAll_ContractBy3_When_3Total() public{
         //Arrange
         cheats.startPrank(fedChair);
         yearnFed.expansion(3 ether);
@@ -147,7 +151,7 @@ contract MainnetForkTest is DSTest {
         assertEq(underlying.totalSupply(), preDolaSupply - 3 ether);
     }
 
-    function testTakeProfit_DoNothing_When_NoProfit() public{
+    function test_TakeProfit_DoNothing_When_NoProfit() public{
         //Arrange
         cheats.startPrank(fedChair);
         uint preGovBalance = underlying.balanceOf(gov);
@@ -160,7 +164,7 @@ contract MainnetForkTest is DSTest {
         assertEq(underlying.balanceOf(address(gov)), preGovBalance);
     }
 
-    function testEmergencyWithdraw_Withdraw1Dola_When_Withdrawing1Dola() public {
+    function test_EmergencyWithdraw_Withdraw1Dola_When_Withdrawing1Dola() public {
         //Arrange
         cheats.prank(operator);
         underlying.mint(address(yearnFed), 1 ether);
@@ -176,7 +180,7 @@ contract MainnetForkTest is DSTest {
         assertEq(preGovUnderlyingBalance + 1 ether, underlying.balanceOf(gov));
     }
 
-    function testFailEmergencyWithdraw_Revert_When_VaultShares() public {
+    function testFail_EmergencyWithdraw_Revert_When_VaultShares() public {
         //Arrange
         cheats.prank(fedChair);
         yearnFed.expansion(1 ether);
