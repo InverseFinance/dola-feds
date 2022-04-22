@@ -12,6 +12,23 @@ interface CheatCodes {
     function startPrank(address) external;
     function stopPrank() external;
     function assume(bool) external;
+    function label(address, string calldata) external;
+}
+
+interface StrategyAPI {
+    function name() external view returns (string memory);
+    function vault() external view returns (address);
+    function want() external view returns (address);
+    function apiVersion() external pure returns (string memory);
+    function keeper() external view returns (address);
+    function isActive() external view returns (bool);
+    function delegatedAssets() external view returns (uint256);
+    function estimatedTotalAssets() external view returns (uint256);
+    function tendTrigger(uint256 callCost) external view returns (bool);
+    function tend() external;
+    function harvestTrigger(uint256 callCost) external view returns (bool);
+    function harvest() external;
+    event Harvested(uint256 profit, uint256 loss, uint256 debtPayment, uint256 debtOutstanding);
 }
 
 contract MainnetForkTest is DSTest {
@@ -29,13 +46,16 @@ contract MainnetForkTest is DSTest {
 
     function setUp() public {
         vault = IYearnVault(vaultAddress);
-        cheats.prank(yearnGov);
-        ITestingYearnVault(vaultAddress).setDepositLimit(depositLimit);
+        //cheats.prank(yearnGov);
+        //ITestingYearnVault(vaultAddress).setDepositLimit(depositLimit);
         yearnFed = YearnFed(0xcc180262347F84544c3a4854b87C34117ACADf94);//new YearnFed(vault, gov, 5, 5);
         cheats.prank(operator);
         underlying.addMinter(address(yearnFed));
         cheats.prank(gov);
         yearnFed.changeChair(fedChair);
+        cheats.label(yearnStrat, "YearnStrat");
+        cheats.label(vaultAddress, "Vault");
+        cheats.label(address(underlying), "Dola");
     }
 
     function test_SetFedChair_ChangeChair_WhenSettingNewChair() public{
@@ -150,6 +170,47 @@ contract MainnetForkTest is DSTest {
         assertLt(vault.balanceOf(address(yearnFed)), preYearnFedShares);       
         assertEq(underlying.totalSupply(), preDolaSupply - 3 ether);
     }
+
+    function test_Contraction_ContractWithLoss_When_DeepWithdraw() public{
+        //Arrange
+        StrategyAPI strategy = StrategyAPI(yearnStrat);
+        cheats.startPrank(fedChair);
+        yearnFed.expansion(3000 ether);
+        uint preVaultAssets = vault.totalAssets();
+
+        //Act
+        cheats.startPrank(strategy.keeper());
+        strategy.harvest();
+        cheats.prank(gov);
+        yearnFed.setMaxLossBpContraction(30);
+        cheats.startPrank(fedChair);
+        yearnFed.contraction(1000 ether);
+
+        //Assert
+        assertEq(vault.totalAssets(), preVaultAssets - 1000 ether);
+        assertEq(vault.balanceOf(address(yearnFed)), 2000 ether);       
+    }
+
+    function test_ContractAll_ContractByAll_When_DeepWithdraw() public{
+        //Arrange
+        StrategyAPI strategy = StrategyAPI(yearnStrat);
+        cheats.startPrank(fedChair);
+        yearnFed.expansion(3000 ether);
+        uint preVaultAssets = vault.totalAssets();
+
+        //Act
+        cheats.startPrank(strategy.keeper());
+        strategy.harvest();
+        cheats.prank(gov);
+        yearnFed.setMaxLossBpContraction(30);
+        cheats.startPrank(fedChair);
+        yearnFed.contractAll();
+
+        //Assert
+        assertEq(vault.totalAssets(), preVaultAssets - 3000 ether);
+        assertEq(vault.balanceOf(address(yearnFed)), 0);       
+    }
+
 
     function test_TakeProfit_DoNothing_When_NoProfit() public{
         //Arrange
